@@ -1,0 +1,9 @@
+{
+  "name": "[NAMA] Photo Booth",
+  "short_name": "[NAMA]",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F1E9DD",
+  "theme_color": "#F1E9DD"
+}

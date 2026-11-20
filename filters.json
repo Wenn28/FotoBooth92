@@ -1,0 +1,10 @@
+{
+  "_catatan": "Filter dihitung per piksel di JavaScript (jalan di semua browser, termasuk Safari iPad). Nilai 1 = tidak berubah. soften 0-1 = kekuatan efek lembut. warmth 0-0.3 = geser ke hangat. sepia/grayscale 0-1.",
+  "filters": [
+    { "id": "asli", "name": "Asli", "ops": {} },
+    { "id": "hitam-putih", "name": "Hitam putih", "ops": { "grayscale": 1, "contrast": 1.15 } },
+    { "id": "hangat", "name": "Hangat", "ops": { "warmth": 0.1, "saturate": 1.1, "brightness": 1.03 } },
+    { "id": "klasik", "name": "Klasik", "ops": { "sepia": 0.45, "contrast": 1.05, "saturate": 0.85 } },
+    { "id": "lembut", "name": "Lembut", "ops": { "soften": 0.35, "brightness": 1.05, "contrast": 0.96 } }
+  ]
+}

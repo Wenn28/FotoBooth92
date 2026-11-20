@@ -1,0 +1,150 @@
+﻿<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galeri Foto Acara</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="gallery" style="padding-bottom:0">
+    <span class="brand" data-app-name>[NAMA]</span>
+  </header>
+  <main class="gallery">
+    <div class="gallery-head">
+      <p class="muted" id="evDate" style="margin:0"></p>
+      <h1 class="display" id="evTitle">Foto <em>acara</em></h1>
+    </div>
+    <section id="view" aria-live="polite">
+      <div class="state"><span class="spinner" aria-hidden="true"></span><p>Memuat foto…</p></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { APP_NAME } from "./js/config.js";
+    import { configured, loadFirebase } from "./js/cloud.js";
+
+    const $ = (id) => document.getElementById(id);
+    const POLL_MS = 5000;              // cek ulang foto yang belum sampai
+    const POLL_LIMIT_MS = 10 * 60000;  // berhenti mengecek setelah 10 menit
+    const ID_RE = /^[a-z0-9]{10}$/;
+
+    // URL gambar Google Drive (folder induk dibagikan "siapa saja dengan link")
+    // shortcut: endpoint thumbnail Drive tidak resmi dan bisa dibatasi saat trafik tinggi
+    const driveImg = (id, w) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
+    const driveDownload = (id) => `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
+
+    document.querySelectorAll("[data-app-name]").forEach((el) => { el.textContent = APP_NAME; });
+
+    function state(text, spinner = false) {
+      const box = document.createElement("div");
+      box.className = "state";
+      if (spinner) box.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+      const p = document.createElement("p");
+      p.textContent = text;
+      box.append(p);
+      $("view").replaceChildren(box);
+    }
+
+    function formatDate(iso) {
+      if (!iso) return "";
+      const d = new Date(iso + "T00:00:00");
+      return isNaN(d) ? "" : d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+
+    function link(href, text, cls, external = true) {
+      const a = document.createElement("a");
+      a.href = href; a.className = cls; a.textContent = text;
+      if (external) { a.target = "_blank"; a.rel = "noopener"; }
+      return a;
+    }
+
+    function showSingle(eventId, ev, fileId) {
+      const wrap = document.createElement("div");
+      wrap.className = "single";
+      const img = document.createElement("img");
+      img.width = 1800; img.height = 1200;
+      img.alt = `Foto booth ${ev.name}`;
+      img.fetchPriority = "high";
+      img.src = driveImg(fileId, 1800);
+      const note = document.createElement("p");
+      note.className = "msg";
+      img.onerror = () => { note.dataset.type = "error"; note.textContent = "Pratinjau belum bisa ditampilkan dari Google Drive. Tombol Unduh tetap bisa dipakai, atau muat ulang sebentar lagi."; };
+
+      const actions = document.createElement("div");
+      actions.className = "actions-row";
+      actions.append(link(driveDownload(fileId), "Unduh foto", "btn btn-primary"));
+      actions.append(link(`https://wa.me/?text=${encodeURIComponent(`Foto dari ${ev.name}: ${location.href}`)}`, "Kirim ke WhatsApp", "btn btn-secondary"));
+      if (navigator.share) {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "btn btn-secondary"; b.textContent = "Bagikan link";
+        b.onclick = () => navigator.share({ title: ev.name, url: location.href }).catch(() => {});
+        actions.append(b);
+      }
+      wrap.append(img, note, actions);
+      if (ev.galleryOpen) wrap.append(link(`galeri.html?e=${eventId}`, "Lihat semua foto acara", "btn btn-ghost", false));
+      $("view").replaceChildren(wrap);
+    }
+
+    async function waitForSession(fb, eventId, ev, sessionId) {
+      const ref = fb.doc(fb.db, "events", eventId, "sessions", sessionId);
+      const started = Date.now();
+      for (;;) {
+        const snap = await fb.getDoc(ref);
+        if (snap.exists()) { showSingle(eventId, ev, snap.data().fileId); return; }
+        if (Date.now() - started > POLL_LIMIT_MS) {
+          state("Foto belum sampai. Booth mungkin sedang tanpa internet; buka link ini lagi nanti, fotonya tetap akan muncul.");
+          return;
+        }
+        state("Foto masih dalam perjalanan dari booth. Halaman ini mengecek lagi tiap 5 detik.", true);
+        await new Promise((r) => setTimeout(r, POLL_MS));
+      }
+    }
+
+    async function showAll(fb, eventId, ev) {
+      if (!ev.galleryOpen) { state("Galeri acara ini tidak dibuka untuk umum. Scan QR dari booth untuk melihat foto Anda."); return; }
+      const q = fb.query(fb.collection(fb.db, "events", eventId, "sessions"), fb.orderBy("createdAt", "desc"), fb.limit(120));
+      const snap = await fb.getDocs(q);
+      if (snap.empty) { state("Belum ada foto. Foto muncul di sini setelah tamu berfoto di booth."); return; }
+      const grid = document.createElement("div");
+      grid.className = "grid";
+      snap.forEach((d) => {
+        const a = document.createElement("a");
+        a.href = `galeri.html?e=${eventId}&s=${d.id}`;
+        const img = document.createElement("img");
+        img.width = 600; img.height = 400; img.loading = "lazy";
+        img.alt = "Buka foto";
+        img.src = driveImg(d.data().fileId, 600);
+        a.append(img);
+        grid.append(a);
+      });
+      $("view").replaceChildren(grid);
+    }
+
+    async function main() {
+      const params = new URLSearchParams(location.search);
+      const eventId = params.get("e") || "";
+      const sessionId = params.get("s") || "";
+      if (!configured) { state("Galeri belum diatur oleh pemilik booth."); return; }
+      if (!ID_RE.test(eventId) || (sessionId && !ID_RE.test(sessionId))) { state("Link tidak valid. Scan lagi QR dari booth."); return; }
+
+      const fb = await loadFirebase();
+      const evSnap = await fb.getDoc(fb.doc(fb.db, "events", eventId));
+      if (!evSnap.exists()) { state("Acara tidak ditemukan. Cek lagi link atau QR-nya."); return; }
+      const ev = evSnap.data();
+      document.title = `${ev.name}: Galeri Foto`;
+      $("evTitle").textContent = ev.name;
+      $("evDate").textContent = formatDate(ev.date);
+
+      if (sessionId) await waitForSession(fb, eventId, ev, sessionId);
+      else await showAll(fb, eventId, ev);
+    }
+
+    main().catch((err) => state(`Foto gagal dimuat: ${err.message}. Cek internet, lalu muat ulang halaman.`));
+  </script>
+</body>
+</html>

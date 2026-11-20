@@ -1,0 +1,111 @@
+{
+  "_catatan": "Format cetak. Ukuran dalam piksel pada 300 dpi. 'panels' = potongan kertas; isi 'panel' digambar ulang di tiap potongan (koordinat relatif terhadap potongan). 'shot' = urutan foto yang dipakai slot itu; 'shotOffset' di sebuah panel menggeser nomornya (1 = potongan kanan memakai foto berikutnya). Teks: x,y adalah titik tengah. 'overlay' (opsional) = path PNG transparan ukuran kanvas untuk bingkai tetap. Bingkai upload operator (layar Pengaturan) berlaku untuk semua template.",
+  "_catatanFrames": "Bingkai bawaan, digambar ulang per format sehingga mengikuti posisi foto. background = warna latar; photoBorder = tepi di sekeliling tiap foto; panelBorder = garis di pinggir potongan (insets: jarak tiap garis dari tepi, px); textColor = warna nama acara dan tanggal (kosong = warna template).",
+  "frames": [
+    { "id": "krem", "name": "Krem", "background": "#F1E9DD", "photoBorder": { "color": "#FFFFFF", "width": 10 } },
+    { "id": "terakota", "name": "Terakota", "background": "#C8431F", "photoBorder": { "color": "#FFFFFF", "width": 10 }, "textColor": "#FFFFFF" },
+    { "id": "tinta", "name": "Tinta", "background": "#231F1C", "panelBorder": { "color": "#F1E9DD", "width": 3, "insets": [30] }, "textColor": "#FFFFFF" },
+    { "id": "garis-ganda", "name": "Garis ganda", "background": "#FFFFFF", "panelBorder": { "color": "#231F1C", "width": 3, "insets": [20, 30] } }
+  ],
+  "templates": [
+    {
+      "id": "4r-reguler-tegak",
+      "name": "4R reguler, tegak",
+      "description": "Satu lembar 4 × 6 in tegak, 1 foto portrait 3:4, tanpa dipotong",
+      "canvas": { "width": 1200, "height": 1800, "background": "#FFFFFF" },
+      "print": { "widthIn": 4, "heightIn": 6 },
+      "panels": [{ "x": 0, "y": 0, "w": 1200, "h": 1800 }],
+      "panel": [
+        { "type": "photo", "shot": 0, "x": 60, "y": 60, "w": 1080, "h": 1440 },
+        { "type": "text", "field": "title", "x": 600, "y": 1610, "size": 72, "weight": 600, "font": "display", "color": "#231F1C", "maxWidth": 1080 },
+        { "type": "text", "field": "date", "x": 600, "y": 1700, "size": 36, "weight": 500, "font": "body", "color": "#6B6158", "maxWidth": 1080 }
+      ]
+    },
+    {
+      "id": "4r-reguler-mendatar",
+      "name": "4R reguler, mendatar",
+      "description": "Satu lembar 6 × 4 in mendatar, 1 foto landscape 16:9, tanpa dipotong",
+      "canvas": { "width": 1800, "height": 1200, "background": "#FFFFFF" },
+      "print": { "widthIn": 6, "heightIn": 4 },
+      "panels": [{ "x": 0, "y": 0, "w": 1800, "h": 1200 }],
+      "panel": [
+        { "type": "photo", "shot": 0, "x": 60, "y": 60, "w": 1680, "h": 945 },
+        { "type": "text", "field": "title", "x": 900, "y": 1075, "size": 64, "weight": 600, "font": "display", "color": "#231F1C", "maxWidth": 1680 },
+        { "type": "text", "field": "date", "x": 900, "y": 1145, "size": 30, "weight": 500, "font": "body", "color": "#6B6158", "maxWidth": 1680 }
+      ]
+    },
+    {
+      "id": "4r-kiri-kanan-2-foto",
+      "name": "2 foto, kiri-kanan",
+      "description": "Layout 1 foto per potongan, tapi foto kiri dan kanan berbeda (2 kali foto)",
+      "canvas": { "width": 1800, "height": 1200, "background": "#FFFFFF" },
+      "print": { "widthIn": 6, "heightIn": 4 },
+      "panels": [
+        { "x": 0, "y": 0, "w": 900, "h": 1200 },
+        { "x": 900, "y": 0, "w": 900, "h": 1200, "shotOffset": 1 }
+      ],
+      "cutLines": [{ "x": 900 }],
+      "panel": [
+        { "type": "photo", "shot": 0, "x": 100, "y": 60, "w": 700, "h": 933 },
+        { "type": "text", "field": "title", "x": 450, "y": 1100, "size": 76, "weight": 600, "font": "display", "color": "#231F1C", "maxWidth": 700 }
+      ]
+    },
+    {
+      "id": "4r-dua-potong-2-foto",
+      "name": "2 foto",
+      "description": "4R mendatar, 2 potong identik, 2 foto 4:3 bertumpuk",
+      "canvas": { "width": 1800, "height": 1200, "background": "#FFFFFF" },
+      "print": { "widthIn": 6, "heightIn": 4 },
+      "panels": [
+        { "x": 0, "y": 0, "w": 900, "h": 1200 },
+        { "x": 900, "y": 0, "w": 900, "h": 1200 }
+      ],
+      "cutLines": [{ "x": 900 }],
+      "panel": [
+        { "type": "photo", "shot": 0, "x": 150, "y": 60, "w": 600, "h": 450 },
+        { "type": "photo", "shot": 1, "x": 150, "y": 540, "w": 600, "h": 450 },
+        { "type": "text", "field": "title", "x": 450, "y": 1068, "size": 60, "weight": 600, "font": "display", "color": "#231F1C", "maxWidth": 700 },
+        { "type": "text", "field": "date", "x": 450, "y": 1140, "size": 30, "weight": 500, "font": "body", "color": "#6B6158", "maxWidth": 700 }
+      ]
+    },
+    {
+      "id": "4r-dua-potong-3-foto",
+      "name": "3 foto",
+      "description": "4R mendatar, 2 potong identik, 1 foto besar + 2 foto kecil",
+      "canvas": { "width": 1800, "height": 1200, "background": "#FFFFFF" },
+      "print": { "widthIn": 6, "heightIn": 4 },
+      "panels": [
+        { "x": 0, "y": 0, "w": 900, "h": 1200 },
+        { "x": 900, "y": 0, "w": 900, "h": 1200 }
+      ],
+      "cutLines": [{ "x": 900 }],
+      "panel": [
+        { "type": "photo", "shot": 0, "x": 100, "y": 60, "w": 700, "h": 525 },
+        { "type": "photo", "shot": 1, "x": 100, "y": 605, "w": 340, "h": 340 },
+        { "type": "photo", "shot": 2, "x": 460, "y": 605, "w": 340, "h": 340 },
+        { "type": "text", "field": "title", "x": 450, "y": 1050, "size": 60, "weight": 600, "font": "display", "color": "#231F1C", "maxWidth": 700 },
+        { "type": "text", "field": "date", "x": 450, "y": 1122, "size": 30, "weight": 500, "font": "body", "color": "#6B6158", "maxWidth": 700 }
+      ]
+    },
+    {
+      "id": "4r-dua-potong-4-foto",
+      "name": "4 foto",
+      "description": "4R mendatar, 2 potong identik, grid 2 x 2 foto portrait 3:4",
+      "canvas": { "width": 1800, "height": 1200, "background": "#FFFFFF" },
+      "print": { "widthIn": 6, "heightIn": 4 },
+      "panels": [
+        { "x": 0, "y": 0, "w": 900, "h": 1200 },
+        { "x": 900, "y": 0, "w": 900, "h": 1200 }
+      ],
+      "cutLines": [{ "x": 900 }],
+      "panel": [
+        { "type": "photo", "shot": 0, "x": 100, "y": 60, "w": 340, "h": 453 },
+        { "type": "photo", "shot": 1, "x": 460, "y": 60, "w": 340, "h": 453 },
+        { "type": "photo", "shot": 2, "x": 100, "y": 533, "w": 340, "h": 453 },
+        { "type": "photo", "shot": 3, "x": 460, "y": 533, "w": 340, "h": 453 },
+        { "type": "text", "field": "title", "x": 450, "y": 1068, "size": 60, "weight": 600, "font": "display", "color": "#231F1C", "maxWidth": 700 },
+        { "type": "text", "field": "date", "x": 450, "y": 1140, "size": 30, "weight": 500, "font": "body", "color": "#6B6158", "maxWidth": 700 }
+      ]
+    }
+  ]
+}

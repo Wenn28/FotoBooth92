@@ -1,0 +1,225 @@
+﻿<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F1E9DD">
+  <link rel="icon" href="data:,">
+  <!-- Web app: Add to Home Screen membuka layar penuh tanpa bilah browser. Ikon belum ada (menunggu desain). -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="[NAMA]">
+  <title>Photo Booth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Ukuran kertas cetak. Diperbarui otomatis dari template yang dipilih (default 4R mendatar). -->
+  <style id="pageStyle">
+    @page { size: 6in 4in; margin: 0; }
+    #printArea img { width: 6in; height: 4in; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
+</head>
+<body>
+  <p class="msg boot" id="boot" role="status">Memuat booth…</p>
+
+  <!-- ===== 1. Pengaturan operator ===== -->
+  <main class="screen" id="scrSetup" hidden>
+    <div class="setup">
+      <header class="setup-head">
+        <span class="brand" data-app-name>[NAMA]</span>
+        <button class="btn btn-primary btn-lg" id="btnOpen" type="button">Buka booth</button>
+      </header>
+      <h1 class="display" style="font-size: clamp(36px, 5vw, 56px)" tabindex="-1">Siapkan booth untuk <em>acara</em> ini.</h1>
+      <p class="msg" id="setupMsg" role="status" aria-live="polite"></p>
+
+      <div class="setup-grid">
+        <div class="card">
+          <h2>Acara</h2>
+          <div class="field">
+            <label for="inTitle">Nama acara (tercetak di foto)</label>
+            <input class="input" id="inTitle" maxlength="60" autocomplete="off" placeholder="Contoh: Nikah Rina &amp; Bayu">
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="inDate">Tanggal</label>
+              <input class="input" id="inDate" type="date">
+            </div>
+            <div class="field">
+              <label for="inCountdown">Ambil foto</label>
+              <select class="input" id="inCountdown">
+                <option value="0">Manual, tekan Jepret</option>
+                <option value="3">Otomatis, 3 detik</option>
+                <option value="5">Otomatis, 5 detik</option>
+                <option value="10">Otomatis, 10 detik</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="inFacing">Kamera</label>
+              <select class="input" id="inFacing">
+                <option value="user">Depan</option>
+                <option value="environment">Belakang</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="inFilter">Filter awal</label>
+              <select class="input" id="inFilter"></select>
+            </div>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="inMirror">
+            <span><strong>Simpan seperti cermin</strong><small>Hasil cetak sama persis dengan yang tamu lihat di layar. Matikan bila ada tulisan di latar.</small></span>
+          </label>
+        </div>
+
+        <div class="card">
+          <fieldset>
+            <legend>Format cetak (kertas 4R, dipotong tengah jadi 2)</legend>
+            <div class="templates" id="templateList"></div>
+          </fieldset>
+        </div>
+
+        <div class="card" id="frameCard">
+          <h2>Bingkai</h2>
+          <p class="muted" style="margin:0; font-size:14px">Berlaku untuk semua format. Ukuran <strong>900 × 1200</strong> (satu potongan, dipakai di kiri dan kanan) atau <strong>1800 × 1200</strong> (satu lembar). Posisi foto berbeda tiap format: unduh panduan ukuran untuk format yang sedang dipilih, lalu buat area fotonya transparan (PNG).</p>
+          <div class="frame-list" id="frameNow" role="radiogroup" aria-label="Bingkai tersimpan"></div>
+          <div class="btn-flow">
+            <button class="btn btn-primary" id="btnFramePick" type="button">Upload bingkai baru</button>
+            <a class="btn btn-secondary" id="btnGuide" href="#" download="panduan-bingkai.png">Unduh panduan ukuran</a>
+            <button class="btn btn-secondary" id="btnFrameDelete" type="button" hidden>Hapus bingkai terpilih</button>
+          </div>
+          <input type="file" id="framePick" accept="image/png,image/jpeg,image/webp" hidden>
+          <label class="check" id="showTitleRow">
+            <input type="checkbox" id="inShowTitle">
+            <span><strong>Tulis nama acara di atas bingkai</strong><small>Matikan bila nama acara sudah ada di desain bingkai.</small></span>
+          </label>
+          <p class="msg" id="frameMsg" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="card card-sand" id="cloudCard">
+          <h2>Galeri QR</h2>
+          <p class="muted" id="cloudInfo" style="margin:0"></p>
+          <div class="cloud-user" id="cloudUser" hidden>
+            <span id="cloudWho"></span>
+            <button class="btn btn-secondary" id="btnSignOut" type="button">Keluar</button>
+          </div>
+          <button class="btn btn-secondary" id="btnSignIn" type="button" hidden>Masuk dengan Google</button>
+          <label class="check" id="useCloudRow" hidden>
+            <input type="checkbox" id="inUseCloud">
+            <span><strong>Kirim foto ke galeri dan tampilkan QR</strong><small>Tamu scan QR untuk mengunduh foto di HP. Tanpa internet, foto disimpan dulu dan dikirim otomatis nanti.</small></span>
+          </label>
+          <label class="check" id="galleryRow" hidden>
+            <input type="checkbox" id="inGalleryOpen">
+            <span><strong>Buka galeri semua foto</strong><small>Siapa pun yang punya link acara bisa melihat semua foto. Bila mati, tamu hanya melihat fotonya sendiri.</small></span>
+          </label>
+          <p class="muted" id="eventInfo" style="margin:0; font-size:14px; overflow-wrap:anywhere" hidden></p>
+          <button class="btn btn-ghost" id="btnNewEvent" type="button" hidden>Mulai event baru</button>
+          <p class="msg" id="queueMsg" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== 2. Layar awal untuk tamu ===== -->
+  <main class="screen start" id="scrStart" hidden>
+    <header class="start-top">
+      <span class="brand" data-app-name>[NAMA]</span>
+      <button class="btn btn-ghost" id="btnSettings" type="button">Pengaturan</button>
+    </header>
+    <div class="start-main">
+      <p class="start-event" id="startEvent"></p>
+      <h1 class="display start-title" tabindex="-1">Siap <em>berpose?</em></h1>
+      <div class="start-actions">
+        <button class="btn btn-primary" id="btnStart" type="button">Mulai foto</button>
+        <button class="btn btn-secondary btn-lg" id="btnPick" type="button">Pilih dari galeri</button>
+      </div>
+      <p class="muted" id="startHint" style="margin:0"></p>
+      <p class="msg" id="startMsg" role="status" aria-live="polite"></p>
+      <input type="file" id="filePick" accept="image/*" multiple hidden>
+    </div>
+  </main>
+
+  <!-- ===== 3. Kamera ===== -->
+  <main class="screen capture" id="scrCapture" hidden>
+    <div class="capture-bar">
+      <h1 class="shot-label" id="shotLabel" tabindex="-1">Bersiap</h1>
+      <button class="btn btn-ghost" id="btnCancel" type="button">Batal</button>
+    </div>
+    <div class="frame" id="frame">
+      <video id="video" playsinline muted autoplay width="1280" height="960"></video>
+      <div class="count" aria-hidden="true"><span id="countNum" hidden></span></div>
+      <div class="flash" id="flash"></div>
+    </div>
+    <button class="btn btn-primary shutter" id="btnShutter" type="button" hidden>Jepret</button>
+    <p class="sr-only" id="countLive" aria-live="assertive"></p>
+    <div class="cam-error" id="camError" role="alert" hidden>
+      <h2>Kamera tidak bisa dibuka</h2>
+      <p id="camErrorText" style="margin:0"></p>
+      <div class="actions">
+        <button class="btn btn-primary" id="btnCamRetry" type="button">Coba lagi</button>
+        <button class="btn btn-secondary" id="btnCamPick" type="button">Pilih dari galeri</button>
+        <button class="btn btn-secondary" id="btnCamBack" type="button">Kembali</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== 4. Review: pilih filter atau ulangi ===== -->
+  <main class="screen" id="scrReview" hidden>
+    <div class="result">
+      <div>
+        <div class="paper" id="reviewPaper"><canvas id="reviewCanvas" width="1800" height="1200" role="img" aria-label="Pratinjau hasil cetak"></canvas></div>
+        <p class="paper-note" id="cutNote">Garis putus-putus = tempat potong. Garis ini tidak ikut tercetak.</p>
+      </div>
+      <div class="side-panel">
+        <h1 class="display" tabindex="-1">Suka <em>hasilnya?</em></h1>
+        <div>
+          <p class="label" id="filterLabel" style="margin:0 0 8px">Filter</p>
+          <div class="filters" id="filterList" role="group" aria-labelledby="filterLabel"></div>
+        </div>
+        <div class="actions-col">
+          <button class="btn btn-primary btn-lg" id="btnAccept" type="button">Pakai foto ini</button>
+          <button class="btn btn-secondary" id="btnRetake" type="button">Ulangi foto</button>
+        </div>
+        <p class="msg" id="reviewMsg" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== 5. Bagikan: unduh, cetak, QR ===== -->
+  <main class="screen" id="scrShare" hidden>
+    <div class="result">
+      <div>
+        <div class="paper" id="sharePaper"><img id="shareImg" width="1800" height="1200" alt="Hasil cetak foto booth"></div>
+      </div>
+      <div class="side-panel">
+        <h1 class="display" tabindex="-1">Bawa <em>pulang</em> fotonya.</h1>
+        <div class="qr-card" id="qrCard" hidden>
+          <div class="qr" id="qrBox" role="img" aria-label="Kode QR menuju foto Anda"></div>
+          <div>
+            <strong>Scan untuk unduh di HP</strong>
+            <p id="qrStatus" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button class="btn btn-primary" id="btnPrint" type="button">Cetak</button>
+          <a class="btn btn-secondary" id="btnDownload" href="#" download="foto.png">Unduh PNG</a>
+          <button class="btn btn-secondary" id="btnShare" type="button" hidden>Bagikan</button>
+        </div>
+        <button class="btn btn-secondary btn-lg" id="btnDone" type="button">Selesai, tamu berikutnya</button>
+        <p class="idle-note">Layar kembali ke awal setelah 2 menit tanpa sentuhan.</p>
+        <p class="msg" id="shareMsg" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Hanya tampil saat mencetak -->
+  <div id="printArea"><img id="printImg" alt="" width="1800" height="1200"></div>
+
+  <script type="module" src="js/booth.js"></script>
+</body>
+</html>

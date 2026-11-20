@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function eventData(eventId) { return get(/databases/$(db)/documents/events/$(eventId)).data; }
+    function validEvent(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && d.date is string && d.date.size() <= 10
+        && d.galleryOpen is bool;
+    }
+
+    // Event: siapa pun yang punya link boleh membaca nama dan tanggalnya
+    match /events/{eventId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn()
+        && eventId.matches('^[a-z0-9]{10}$')
+        && request.resource.data.keys().hasOnly(['ownerUid', 'name', 'date', 'galleryOpen', 'createdAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && validEvent(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'date', 'galleryOpen'])
+        && validEvent(request.resource.data);
+
+      // Sesi = satu hasil cetak. Dibuka lewat QR (get); daftar lengkap hanya bila galeri dibuka.
+      match /sessions/{sessionId} {
+        allow get: if true;
+        allow list: if eventData(eventId).galleryOpen == true;
+        allow create: if signedIn()
+          && eventData(eventId).ownerUid == request.auth.uid
+          && sessionId.matches('^[a-z0-9]{10}$')
+          && request.resource.data.keys().hasOnly(['fileId', 'createdAt'])
+          && request.resource.data.fileId is string && request.resource.data.fileId.size() <= 100
+          && request.resource.data.createdAt == request.time;
+      }
+    }
+  }
+}
