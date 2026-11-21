@@ -21,7 +21,8 @@ const todayISO = () => {
 
 const DEFAULTS = {
   title: "", date: todayISO(), templateId: "4r-reguler-tegak", filterId: "asli",
-  countdown: 3, facing: "user", mirror: false, useCloud: false, galleryOpen: false, eventId: "",
+  countdown: 3, manual: false, // countdown = detik timer mode otomatis (1-60)
+  facing: "user", mirror: false, useCloud: false, galleryOpen: false, eventId: "",
   showTitle: true, // hanya berlaku untuk template bingkai sendiri
   frameId: "",     // bingkai terpilih dari daftar bingkai tersimpan
 };
@@ -125,7 +126,15 @@ function buildSetup() {
   const s = state.s;
   $("inTitle").value = s.title;
   $("inDate").value = s.date;
-  $("inCountdown").value = String(s.countdown);
+  $("inTimer").value = String(s.countdown);
+  $("inTimer").disabled = s.manual;
+  document.querySelector(`input[name="captureMode"][value="${s.manual ? "manual" : "auto"}"]`).checked = true;
+  // Saat kolom ditinggalkan: angka dibulatkan dan dipotong ke 1-60; kolom kosong kembali ke nilai sebelumnya
+  $("inTimer").addEventListener("change", () => {
+    const v = Math.round(Number($("inTimer").value));
+    if ($("inTimer").value !== "" && Number.isFinite(v)) s.countdown = Math.min(60, Math.max(1, v));
+    $("inTimer").value = String(s.countdown);
+  });
   $("inFacing").value = s.facing;
   $("inMirror").checked = s.mirror;
   $("inUseCloud").checked = s.useCloud;
@@ -153,7 +162,10 @@ function buildSetup() {
   const sync = () => {
     s.title = $("inTitle").value.trim();
     s.date = $("inDate").value;
-    s.countdown = Number($("inCountdown").value);
+    s.manual = document.querySelector('input[name="captureMode"]:checked').value === "manual";
+    $("inTimer").disabled = s.manual;
+    const sec = Number($("inTimer").value);
+    if (Number.isInteger(sec) && sec >= 1 && sec <= 60) s.countdown = sec;
     s.facing = $("inFacing").value;
     s.filterId = $("inFilter").value;
     s.mirror = $("inMirror").checked;
@@ -322,7 +334,7 @@ function updateStart() {
   const s = state.s;
   $("startEvent").textContent = [s.title, formatDate(s.date)].filter(Boolean).join(" · ");
   const n = shotCount(template());
-  const how = s.countdown ? `hitung mundur ${s.countdown} detik` : "tekan Jepret";
+  const how = s.manual ? "tekan Jepret" : `hitung mundur ${s.countdown} detik`;
   $("startHint").textContent = n > 1 ? `Ambil ${n} foto, masing-masing ${how}.` : `Satu foto, ${how}.`;
   msg("startMsg", "");
 }
@@ -458,7 +470,7 @@ async function startCapture() {
   catch (err) { if (run === state.run) cameraError(err); return; }
 
   const mirror = state.s.facing === "user" && state.s.mirror;
-  const manual = state.s.countdown === 0;
+  const manual = state.s.manual;
   $("scrCapture").classList.toggle("manual", manual);
   for (let i = 0; i < n; i++) {
     $("frame").style.setProperty("--ratio", shotRatio(t, i));
@@ -629,6 +641,8 @@ async function init() {
   state.s = loadSettings();
   if (!state.templates.some((t) => t.id === state.s.templateId)) state.s.templateId = state.templates[0].id;
   if (!state.filters.some((f) => f.id === state.s.filterId)) state.s.filterId = state.filters[0].id;
+  // Pengaturan versi sebelumnya menyimpan manual sebagai countdown 0
+  if (!(state.s.countdown >= 1)) { state.s.manual = true; state.s.countdown = 3; }
 
   // Bingkai tersimpan dari sesi sebelumnya
   try {

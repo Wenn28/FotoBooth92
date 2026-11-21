@@ -63,6 +63,8 @@ h2 { margin: 0; font-size: 18px; font-weight: 700; }
 .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
 .check { display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; }
 .check:hover { border-color: var(--ink); }
+.check:has(input:checked) { border-color: var(--ink); }
+.input:disabled { background: var(--sand); color: var(--muted); }
 .check input { flex: none; width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--accent); }
 .check strong { display: block; font-size: 15px; }
 .check small { display: block; font-size: 13px; line-height: 1.4; color: var(--muted); }

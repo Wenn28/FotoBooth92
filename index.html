@@ -49,15 +49,23 @@
               <input class="input" id="inDate" type="date">
             </div>
             <div class="field">
-              <label for="inCountdown">Ambil foto</label>
-              <select class="input" id="inCountdown">
-                <option value="0">Manual, tekan Jepret</option>
-                <option value="3">Otomatis, 3 detik</option>
-                <option value="5">Otomatis, 5 detik</option>
-                <option value="10">Otomatis, 10 detik</option>
-              </select>
+              <label for="inTimer">Timer otomatis (detik)</label>
+              <input class="input" id="inTimer" type="number" inputmode="numeric" min="1" max="60" step="1">
             </div>
           </div>
+          <fieldset>
+            <legend>Cara ambil foto</legend>
+            <div class="row">
+              <label class="check">
+                <input type="radio" name="captureMode" value="manual">
+                <span><strong>Manual</strong><small>Tekan tombol Jepret untuk setiap foto.</small></span>
+              </label>
+              <label class="check">
+                <input type="radio" name="captureMode" value="auto">
+                <span><strong>Otomatis</strong><small>Foto diambil sendiri setelah timer habis.</small></span>
+              </label>
+            </div>
+          </fieldset>
           <div class="row">
             <div class="field">
               <label for="inFacing">Kamera</label>
@@ -79,7 +87,7 @@
 
         <div class="card">
           <fieldset>
-            <legend>Format cetak (kertas 4R, dipotong tengah jadi 2)</legend>
+            <legend>Format cetak (kertas 4R)</legend>
             <div class="templates" id="templateList"></div>
           </fieldset>
         </div>
