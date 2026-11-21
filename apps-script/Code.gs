@@ -3,9 +3,9 @@
 //
 // Nilai rahasia TIDAK ditulis di file ini (supaya aman di GitHub). Isi lewat
 // Project Settings > Script Properties:
-//   ROOT_FOLDER_ID       ID folder Drive induk (drive.google.com/drive/folders/<ID>)
-//   FIREBASE_API_KEY     apiKey dari js/config.js
-//   FIREBASE_PROJECT_ID  projectId dari js/config.js
+//   ROOT_FOLDER_ID       1l2SxJJBHy1y2pP3TJ60Yb1MKGe-jZfFf
+//   FIREBASE_API_KEY     AIzaSyBtw-aE7E8c_ljw0Y-XdAECBZJs7jAO8Qc
+//   FIREBASE_PROJECT_ID  photobooth-4cc61
 
 const MAX_BYTES = 4 * 1024 * 1024; // batas ukuran JPEG
 const ID_RE = /^[a-z0-9]{10}$/;
