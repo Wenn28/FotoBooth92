@@ -30,19 +30,34 @@ export async function fileToImage(blob) {
   return img;
 }
 
-// Satu record per bingkai, kuncinya id acak. Kembalikan id baru.
-export async function saveFrame(blob, name) {
+// SHA-256 isi file (hex), sama dengan hash yang dihitung Apps Script untuk file di Drive
+export async function hashBlob(blob) {
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", await blob.arrayBuffer()));
+  return Array.from(d, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Satu record per bingkai, kuncinya id acak. meta: { driveId, hash } bila sudah ada di Drive. Kembalikan id baru.
+export async function saveFrame(blob, name, meta = {}) {
   const id = crypto.randomUUID();
-  await op("readwrite", (s) => s.put({ blob, name, at: Date.now() }, id));
+  await op("readwrite", (s) => s.put({ blob, name, at: Date.now(), ...meta }, id));
   return id;
 }
 export const deleteFrame = (id) => op("readwrite", (s) => s.delete(id));
 
-// Semua bingkai tersimpan, urut dari yang paling lama diupload: [{ id, name, img }]
+// Gabungkan driveId / hash ke record yang sudah ada
+export async function setFrameMeta(id, meta) {
+  const rec = await op("readonly", (s) => s.get(id));
+  if (rec) await op("readwrite", (s) => s.put({ ...rec, ...meta }, id));
+}
+
+// Semua bingkai tersimpan, urut dari yang paling lama diupload: [{ id, name, blob, img, driveId, hash }]
 export async function loadFrames() {
   const keys = await op("readonly", (s) => s.getAllKeys());
   const recs = await op("readonly", (s) => s.getAll());
-  const list = await Promise.all(recs.map(async (r, i) => ({ id: String(keys[i]), name: r.name, at: r.at || 0, img: await fileToImage(r.blob) })));
+  const list = await Promise.all(recs.map(async (r, i) => ({
+    id: String(keys[i]), name: r.name, at: r.at || 0, blob: r.blob, driveId: r.driveId || "", hash: r.hash || "",
+    img: await fileToImage(r.blob),
+  })));
   return list.sort((a, b) => a.at - b.at);
 }
 

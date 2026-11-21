@@ -251,10 +251,12 @@ async function uploadFrame(file) {
   try {
     const img = await frames.fileToImage(file);
     frames.analyzeFrame(img, template()); // menolak ukuran yang tidak cocok dengan format terpilih
-    const id = await frames.saveFrame(file, file.name);
-    state.frames.push({ id, img, name: file.name });
+    const hash = await frames.hashBlob(file);
+    const id = await frames.saveFrame(file, file.name, { hash });
+    state.frames.push({ id, img, name: file.name, blob: file, hash, driveId: "" });
     msg("frameMsg", `${file.name} tersimpan di perangkat ini dan dipilih.`, "ok");
     selectFrame(id);
+    syncFrames(); // kirim ke Drive bila sudah login dan online; bila tidak, menunggu sinkron berikutnya
   } catch (err) {
     msg("frameMsg", err.message.startsWith("Ukuran") ? err.message : `Bingkai tidak bisa dibuka: ${err.message}`, "error");
   }
@@ -264,10 +266,64 @@ async function uploadFrame(file) {
 async function removeFrame() {
   const sel = currentFrame();
   if (!sel || sel.builtin) return;
+  if (sel.driveId) {
+    // Pindahkan ke frame/terhapus di Drive dulu; kalau gagal, jangan hapus lokal (sinkron akan mengunduhnya lagi)
+    try { await cloud.frameHide(sel.driveId); }
+    catch (err) { msg("frameMsg", `Belum dihapus: ${err.message}. Masuk dengan Google dan pastikan online.`, "error"); return; }
+  }
   await frames.deleteFrame(sel.id).catch(() => {});
   state.frames = state.frames.filter((f) => f !== sel);
   msg("frameMsg", `${sel.name} dihapus.`);
   selectFrame("");
+}
+
+// Samakan bingkai perangkat ini dengan folder Drive "frame": kirim yang baru, unduh yang belum ada,
+// buang salinan yang sudah dihapus dari Drive. Bingkai yang belum pernah terkirim tidak pernah dibuang.
+let syncingFrames = false;
+async function syncFrames() {
+  if (syncingFrames || !cloud.configured || !state.user || !navigator.onLine) return;
+  syncingFrames = true;
+  $("btnFrameSync").disabled = true;
+  msg("frameMsg", "Sinkron bingkai dengan Google Drive…");
+  let failed = 0;
+  try {
+    const remote = await cloud.frameList();
+    const remoteIds = new Set(remote.map((r) => r.id));
+
+    for (const f of state.frames.filter((x) => !x.builtin)) {
+      try {
+        if (f.driveId && !remoteIds.has(f.driveId)) { // dihapus dari Drive di perangkat lain
+          await frames.deleteFrame(f.id);
+          state.frames = state.frames.filter((x) => x !== f);
+          if (state.s.frameId === f.id) { state.s.frameId = ""; saveSettings(); }
+        } else if (!f.driveId) {
+          f.hash = f.hash || await frames.hashBlob(f.blob);
+          const match = remote.find((r) => r.hash === f.hash);
+          f.driveId = match ? match.id : (await cloud.frameUpload(f.blob, f.name)).fileId;
+          await frames.setFrameMeta(f.id, { hash: f.hash, driveId: f.driveId });
+          remoteIds.add(f.driveId);
+        }
+      } catch (err) { failed++; msg("frameMsg", `Sebagian bingkai gagal: ${err.message}`, "error"); }
+    }
+
+    const known = new Set(state.frames.map((f) => f.driveId));
+    for (const r of remote.filter((x) => !known.has(x.id))) {
+      try {
+        const blob = await cloud.frameGet(r.id);
+        const img = await frames.fileToImage(blob);
+        const id = await frames.saveFrame(blob, r.name, { hash: r.hash, driveId: r.id });
+        state.frames.push({ id, img, name: r.name, blob, hash: r.hash, driveId: r.id });
+      } catch (err) { failed++; msg("frameMsg", `Bingkai "${r.name}" gagal diunduh: ${err.message}`, "error"); }
+    }
+    if (!failed) msg("frameMsg", "Bingkai sudah sama dengan Google Drive.", "ok");
+  } catch (err) {
+    msg("frameMsg", `Sinkron bingkai gagal: ${err.message}`, "error");
+  } finally {
+    syncingFrames = false;
+    $("btnFrameSync").disabled = false;
+    renderFrameCard();
+    renderThumbs();
+  }
 }
 
 function renderCloud() {
@@ -277,6 +333,7 @@ function renderCloud() {
   $("cloudUser").hidden = !signed;
   $("useCloudRow").hidden = !signed;
   $("galleryRow").hidden = !signed || !s.useCloud;
+  $("btnFrameSync").hidden = !signed;
   $("btnNewEvent").hidden = !signed || !s.eventId;
   $("eventInfo").hidden = !signed || !s.eventId;
 
@@ -656,7 +713,7 @@ async function init() {
   buildFilters();
   renderCloud();
   cloud.onQueue((st) => { renderQueue(st); renderQrStatus(st); });
-  cloud.watchUser((user) => { state.user = user; renderCloud(); renderQueue(cloud.queueStatus()); })
+  cloud.watchUser((user) => { state.user = user; renderCloud(); renderQueue(cloud.queueStatus()); if (user) syncFrames(); })
     .catch((err) => { $("cloudInfo").textContent = `Galeri QR tidak bisa dimuat: ${err.message}`; });
 
   // Tombol
@@ -674,7 +731,8 @@ async function init() {
     msg("setupMsg", "Event baru: isi nama acara, lalu Buka booth. Galeri event lama tetap ada.", "ok");
     $("inTitle").focus();
   });
-  $("btnSettings").addEventListener("click", () => show("scrSetup"));
+  $("btnSettings").addEventListener("click", () => { show("scrSetup"); syncFrames(); });
+  $("btnFrameSync").addEventListener("click", syncFrames);
   $("btnFramePick").addEventListener("click", () => $("framePick").click());
   $("framePick").addEventListener("change", (e) => uploadFrame(e.target.files[0]));
   $("frameNow").addEventListener("change", (e) => { if (e.target.name === "frame") selectFrame(e.target.value); });

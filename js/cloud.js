@@ -145,20 +145,42 @@ function blobToBase64(blob) {
   });
 }
 
-async function uploadOne(item) {
-  const { auth, db, doc, setDoc, serverTimestamp } = await loadFirebase();
+// Panggil Apps Script dengan idToken operator; kembalikan JSON jawabannya (ok sudah dicek)
+async function callScript(payload) {
+  const { auth } = await loadFirebase();
   const idToken = await auth.currentUser.getIdToken();
   // text/plain agar browser tidak mengirim preflight CORS yang ditolak Apps Script
   const res = await withTimeout(fetch(APPS_SCRIPT_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ idToken, eventId: item.eventId, sessionId: item.sessionId, image: await blobToBase64(item.blob) }),
+    body: JSON.stringify({ idToken, ...payload }),
   }), 60000);
   const out = await res.json();
-  if (!out.ok) throw new Error(out.error || "Upload ditolak server");
+  if (!out.ok) throw new Error(out.error || "Ditolak server");
+  return out;
+}
+
+async function uploadOne(item) {
+  const { db, doc, setDoc, serverTimestamp } = await loadFirebase();
+  const out = await callScript({ eventId: item.eventId, sessionId: item.sessionId, image: await blobToBase64(item.blob) });
   await withTimeout(setDoc(doc(db, "events", item.eventId, "sessions", item.sessionId), {
     fileId: out.fileId, createdAt: serverTimestamp(),
   }));
+}
+
+// ===== Bingkai di folder Drive "frame" =====
+export const frameList = async () => (await callScript({ action: "frameList" })).frames; // [{ id, name, hash }]
+export const frameHide = (fileId) => callScript({ action: "frameHide", fileId });
+
+// Kembalikan { fileId, hash }; isi yang sama dengan file yang sudah ada tidak disimpan dua kali
+export async function frameUpload(blob, name) {
+  const { fileId, hash } = await callScript({ action: "frameUpload", name, data: await blobToBase64(blob) });
+  return { fileId, hash };
+}
+
+export async function frameGet(fileId) {
+  const out = await callScript({ action: "frameGet", fileId });
+  return (await fetch(`data:${out.mime};base64,${out.data}`)).blob();
 }
 
 // Kirim semua foto di antrean, satu per satu. Aman dipanggil berkali-kali.
