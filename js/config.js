@@ -3,7 +3,7 @@
 // booth tetap jalan (download, print, share), hanya galeri QR yang mati.
 
 // Nama aplikasi yang tampil di layar. Placeholder sampai nama final dipilih.
-export const APP_NAME = "[NAMA]";
+export const APP_NAME = "Fotobooth";
 
 // Isi dari Firebase Console: Project settings > General > Your apps > Web app > Config.
 export const firebaseConfig = {
