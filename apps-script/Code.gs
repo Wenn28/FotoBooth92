@@ -8,7 +8,7 @@
 //   FIREBASE_PROJECT_ID  photobooth-4cc61
 //   OWNER_EMAIL          email Google operator; akun lain ditolak
 
-const MAX_BYTES = 4 * 1024 * 1024;        // batas ukuran JPEG foto
+const MAX_BYTES = 8 * 1024 * 1024;        // batas ukuran foto sesi (PNG lebih besar dari JPEG)
 const MAX_FRAME_BYTES = 5 * 1024 * 1024;  // batas ukuran bingkai
 const ID_RE = /^[a-z0-9]{10}$/;
 const FRAME_DIR = "frame";
@@ -69,19 +69,20 @@ function uploadPhoto(body, uid, setStep) {
   if (!owner) return reply({ ok: false, error: "Event tidak ditemukan" });
   if (owner !== uid) return reply({ ok: false, error: "Akun ini bukan pemilik event" });
 
-  // Validasi isi: ukuran dan tanda tangan JPEG (FF D8 FF)
+  // Validasi isi: ukuran dan tanda tangan file (JPEG atau PNG)
   const bytes = Utilities.base64Decode(body.image || "");
   if (bytes.length === 0 || bytes.length >= MAX_BYTES) return reply({ ok: false, error: "Ukuran foto tidak valid" });
-  if (imageMime(bytes) !== "image/jpeg") return reply({ ok: false, error: "File bukan JPEG" });
+  const mime = imageMime(bytes);
+  if (mime !== "image/jpeg" && mime !== "image/png") return reply({ ok: false, error: "Foto harus JPEG atau PNG" });
 
   setStep("buka folder induk (cek ROOT_FOLDER_ID)");
   const folder = getOrCreateFolder(DriveApp.getFolderById(prop("ROOT_FOLDER_ID")), body.eventId);
 
   // Upload ulang dari antrean (misalnya koneksi putus setelah file tersimpan) memakai file yang sama
   setStep("simpan foto");
-  const name = body.sessionId + ".jpg";
+  const name = body.sessionId + (mime === "image/png" ? ".png" : ".jpg");
   const existing = folder.getFilesByName(name);
-  const file = existing.hasNext() ? existing.next() : folder.createFile(Utilities.newBlob(bytes, "image/jpeg", name));
+  const file = existing.hasNext() ? existing.next() : folder.createFile(Utilities.newBlob(bytes, mime, name));
   return reply({ ok: true, fileId: file.getId() });
 }
 

@@ -126,6 +126,13 @@
             <input type="checkbox" id="inGalleryOpen">
             <span><strong>Buka galeri semua foto</strong><small>Siapa pun yang punya link acara bisa melihat semua foto. Bila mati, tamu hanya melihat fotonya sendiri.</small></span>
           </label>
+          <div class="field" id="fileFormatRow" hidden>
+            <label for="inDriveFormat">Format file di Google Drive</label>
+            <select class="input" id="inDriveFormat">
+              <option value="image/jpeg">JPEG (file kecil, unduh QR cepat)</option>
+              <option value="image/png">PNG (tanpa kompresi, file besar)</option>
+            </select>
+          </div>
           <p class="muted" id="eventInfo" style="margin:0; font-size:14px; overflow-wrap:anywhere" hidden></p>
           <button class="btn btn-ghost" id="btnNewEvent" type="button" hidden>Mulai event baru</button>
           <p class="msg" id="queueMsg" role="status" aria-live="polite"></p>

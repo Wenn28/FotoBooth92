@@ -22,7 +22,7 @@ const todayISO = () => {
 const DEFAULTS = {
   title: "", date: todayISO(), templateId: "4r-reguler-tegak", filterId: "asli",
   countdown: 3, manual: false, // countdown = detik timer mode otomatis (1-60)
-  facing: "user", mirror: false, useCloud: false, galleryOpen: false, eventId: "",
+  facing: "user", mirror: false, useCloud: false, galleryOpen: false, eventId: "", driveFormat: "image/jpeg",
   showTitle: true, // hanya berlaku untuk template bingkai sendiri
   frameId: "",     // bingkai terpilih dari daftar bingkai tersimpan
 };
@@ -139,6 +139,7 @@ function buildSetup() {
   $("inMirror").checked = s.mirror;
   $("inUseCloud").checked = s.useCloud;
   $("inGalleryOpen").checked = s.galleryOpen;
+  $("inDriveFormat").value = s.driveFormat === "image/png" ? "image/png" : "image/jpeg";
   $("inShowTitle").checked = s.showTitle;
 
   $("inFilter").replaceChildren(...state.filters.map((f) => new Option(f.name, f.id, false, f.id === s.filterId)));
@@ -171,6 +172,7 @@ function buildSetup() {
     s.mirror = $("inMirror").checked;
     s.useCloud = $("inUseCloud").checked;
     s.galleryOpen = $("inGalleryOpen").checked;
+    s.driveFormat = $("inDriveFormat").value;
     const prevTemplate = s.templateId;
     s.templateId = list.querySelector("input:checked")?.value || s.templateId;
     const titleChanged = s.showTitle !== $("inShowTitle").checked;
@@ -333,6 +335,7 @@ function renderCloud() {
   $("cloudUser").hidden = !signed;
   $("useCloudRow").hidden = !signed;
   $("galleryRow").hidden = !signed || !s.useCloud;
+  $("fileFormatRow").hidden = !signed || !s.useCloud;
   $("btnFrameSync").hidden = !signed;
   $("btnNewEvent").hidden = !signed || !s.eventId;
   $("eventInfo").hidden = !signed || !s.eventId;
@@ -646,7 +649,7 @@ async function goShare() {
       if (window.qrcode) $("qrBox").innerHTML = qrSvg(link);
       else $("qrBox").textContent = link; // pustaka QR belum termuat: tampilkan link apa adanya
       $("qrStatus").textContent = "Menyimpan foto…";
-      await cloud.enqueue({ eventId: state.s.eventId, sessionId: state.sessionId, blob: await toBlob(c, "image/jpeg", JPEG_QUALITY) });
+      await cloud.enqueue({ eventId: state.s.eventId, sessionId: state.sessionId, blob: await toBlob(c, state.s.driveFormat === "image/png" ? "image/png" : "image/jpeg", JPEG_QUALITY) });
     }
     show("scrShare");
   } catch (err) {
