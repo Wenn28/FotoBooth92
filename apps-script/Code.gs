@@ -73,7 +73,7 @@ function uploadPhoto(body, uid, setStep) {
   const bytes = Utilities.base64Decode(body.image || "");
   if (bytes.length === 0 || bytes.length >= MAX_BYTES) return reply({ ok: false, error: "Ukuran foto tidak valid" });
   const mime = imageMime(bytes);
-  if (mime !== "image/jpeg" && mime !== "image/png") return reply({ ok: false, error: "Foto harus JPEG atau PNG" });
+  if (mime !== "image/png" && mime !== "image/jpeg") return reply({ ok: false, error: "Foto harus PNG" });
 
   setStep("buka folder induk (cek ROOT_FOLDER_ID)");
   const folder = getOrCreateFolder(DriveApp.getFolderById(prop("ROOT_FOLDER_ID")), body.eventId);
@@ -91,7 +91,7 @@ function uploadFrame(body, dir) {
   const bytes = Utilities.base64Decode(body.data || "");
   if (bytes.length === 0 || bytes.length > MAX_FRAME_BYTES) return reply({ ok: false, error: "Ukuran bingkai maksimal 5 MB" });
   const mime = imageMime(bytes);
-  if (!mime) return reply({ ok: false, error: "Bingkai harus PNG, JPG, atau WebP" });
+  if (mime !== "image/png") return reply({ ok: false, error: "Bingkai harus PNG" });
 
   const hash = sha256(bytes);
   const dup = frameEntries(dir).filter((f) => f.hash === hash)[0];

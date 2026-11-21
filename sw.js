@@ -1,6 +1,6 @@
 // Service worker: menyimpan salinan aplikasi agar booth tetap terbuka saat venue tanpa internet.
 // Strategi: ambil dari jaringan dulu (supaya update langsung terpakai), pakai salinan bila offline.
-const CACHE = "booth-v5";
+const CACHE = "booth-v7";
 const NET_TIMEOUT_MS = 4000; // wifi venue yang lambat dianggap offline setelah 4 detik
 const SHELL = [
   "./", "index.html", "galeri.html", "style.css", "templates.json", "filters.json", "manifest.webmanifest",

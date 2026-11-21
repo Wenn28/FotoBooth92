@@ -10,7 +10,6 @@ const $ = (id) => document.getElementById(id);
 const SETTINGS_KEY = "booth.settings.v1";
 const IDLE_MS = 120000;          // review/bagikan kembali ke layar awal setelah 2 menit tanpa sentuhan
 const BETWEEN_SHOTS_MS = 1200;   // jeda antar foto pada format multi-foto
-const JPEG_QUALITY = 0.9;        // kualitas file yang dikirim ke galeri
 const CAMERA = { width: { ideal: 1920 }, height: { ideal: 1440 } }; // minta 4:3 resolusi tinggi
 
 const todayISO = () => {
@@ -22,7 +21,7 @@ const todayISO = () => {
 const DEFAULTS = {
   title: "", date: todayISO(), templateId: "4r-reguler-tegak", filterId: "asli",
   countdown: 3, manual: false, // countdown = detik timer mode otomatis (1-60)
-  facing: "user", mirror: false, useCloud: false, galleryOpen: false, eventId: "", driveFormat: "image/jpeg",
+  facing: "user", mirror: false, useCloud: false, galleryOpen: false, eventId: "",
   showTitle: true, // hanya berlaku untuk template bingkai sendiri
   frameId: "",     // bingkai terpilih dari daftar bingkai tersimpan
 };
@@ -139,7 +138,6 @@ function buildSetup() {
   $("inMirror").checked = s.mirror;
   $("inUseCloud").checked = s.useCloud;
   $("inGalleryOpen").checked = s.galleryOpen;
-  $("inDriveFormat").value = s.driveFormat === "image/png" ? "image/png" : "image/jpeg";
   $("inShowTitle").checked = s.showTitle;
 
   $("inFilter").replaceChildren(...state.filters.map((f) => new Option(f.name, f.id, false, f.id === s.filterId)));
@@ -172,7 +170,6 @@ function buildSetup() {
     s.mirror = $("inMirror").checked;
     s.useCloud = $("inUseCloud").checked;
     s.galleryOpen = $("inGalleryOpen").checked;
-    s.driveFormat = $("inDriveFormat").value;
     const prevTemplate = s.templateId;
     s.templateId = list.querySelector("input:checked")?.value || s.templateId;
     const titleChanged = s.showTitle !== $("inShowTitle").checked;
@@ -249,7 +246,7 @@ function selectFrame(id) {
 async function uploadFrame(file) {
   $("framePick").value = "";
   if (!file) return;
-  if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { msg("frameMsg", "File harus PNG, JPG, atau WebP.", "error"); return; }
+  if (file.type !== "image/png") { msg("frameMsg", "Bingkai harus PNG (area foto transparan).", "error"); return; }
   try {
     const img = await frames.fileToImage(file);
     frames.analyzeFrame(img, template()); // menolak ukuran yang tidak cocok dengan format terpilih
@@ -335,7 +332,6 @@ function renderCloud() {
   $("cloudUser").hidden = !signed;
   $("useCloudRow").hidden = !signed;
   $("galleryRow").hidden = !signed || !s.useCloud;
-  $("fileFormatRow").hidden = !signed || !s.useCloud;
   $("btnFrameSync").hidden = !signed;
   $("btnNewEvent").hidden = !signed || !s.eventId;
   $("eventInfo").hidden = !signed || !s.eventId;
@@ -607,6 +603,21 @@ function retake() {
 const toBlob = (canvas, type, quality) => new Promise((resolve, reject) =>
   canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Gambar gagal dibuat"))), type, quality));
 
+// PNG untuk Drive di bawah batas server (8 MB). PNG tidak bisa dikompres lewat kualitas, jadi bila kebesaran
+// ukurannya diperkecil bertahap; salinan unduh dan cetak tetap resolusi penuh.
+const DRIVE_MAX_BYTES = 7.5 * 1024 * 1024;
+async function pngUnderLimit(canvas) {
+  let blob = await toBlob(canvas, "image/png");
+  for (let scale = 0.85; blob.size >= DRIVE_MAX_BYTES && scale > 0.3; scale *= 0.85) {
+    const small = document.createElement("canvas");
+    small.width = Math.round(canvas.width * scale);
+    small.height = Math.round(canvas.height * scale);
+    small.getContext("2d").drawImage(canvas, 0, 0, small.width, small.height);
+    blob = await toBlob(small, "image/png");
+  }
+  return blob;
+}
+
 function qrSvg(text) {
   const qr = window.qrcode(0, "M");
   qr.addData(text);
@@ -649,7 +660,7 @@ async function goShare() {
       if (window.qrcode) $("qrBox").innerHTML = qrSvg(link);
       else $("qrBox").textContent = link; // pustaka QR belum termuat: tampilkan link apa adanya
       $("qrStatus").textContent = "Menyimpan foto…";
-      await cloud.enqueue({ eventId: state.s.eventId, sessionId: state.sessionId, blob: await toBlob(c, state.s.driveFormat === "image/png" ? "image/png" : "image/jpeg", JPEG_QUALITY) });
+      await cloud.enqueue({ eventId: state.s.eventId, sessionId: state.sessionId, blob: await pngUnderLimit(c) });
     }
     show("scrShare");
   } catch (err) {

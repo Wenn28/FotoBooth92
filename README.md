@@ -67,7 +67,7 @@ Di Pengaturan, kartu **Bingkai** berisi pilihan **Tanpa bingkai** dan daftar bin
 - **Unduh panduan ukuran** menghasilkan PNG 900 × 1200 dengan area foto transparan, untuk dipakai sebagai dasar desain di Canva atau aplikasi lain.
 - Bisa menyimpan banyak bingkai, misalnya satu per acara. **Upload bingkai baru** menambah ke daftar dan langsung memilihnya. Klik bingkai di daftar untuk berganti, dan **Hapus bingkai terpilih** untuk menghapus.
 - Bingkai disimpan di perangkat ini (IndexedDB) agar booth tetap jalan offline. Mode lokal: perangkat lain perlu upload sendiri.
-- **Dengan cloud:** bingkai juga dikirim ke folder Drive `frame` (di dalam folder induk) dan muncul di semua perangkat yang login dengan akun operator. Sinkron berjalan saat login, saat Pengaturan dibuka, dan lewat tombol **Sinkron dengan Google Drive**. File yang ditaruh langsung di folder `frame` lewat Drive web (PNG, JPG, WebP, maksimal 5 MB) ikut muncul. **Hapus bingkai** memindahkan file ke `frame/terhapus`; seret kembali ke `frame` untuk memulihkannya.
+- **Dengan cloud:** bingkai juga dikirim ke folder Drive `frame` (di dalam folder induk) dan muncul di semua perangkat yang login dengan akun operator. Sinkron berjalan saat login, saat Pengaturan dibuka, dan lewat tombol **Sinkron dengan Google Drive**. File yang ditaruh langsung di folder `frame` lewat Drive web (PNG, maksimal 5 MB) ikut muncul. **Hapus bingkai** memindahkan file ke `frame/terhapus`; seret kembali ke `frame` untuk memulihkannya.
 
 ## Menambah filter
 
